@@ -1,5 +1,5 @@
 use json::Value;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 mod json;
 
@@ -24,18 +24,15 @@ impl Query {
 struct Record {
     bytes: Vec<u8>,
     fields: HashSet<String>,
-    colons: ColonBitmaps,
-    pos: usize,
+    colons: VecDeque<usize>,
 }
 
 impl Record {
     fn new(bytes: Vec<u8>, fields: HashSet<String>) -> Self {
-        let colons = ColonBitmaps::generate(&bytes);
         Record {
             bytes,
             fields,
-            colons,
-            pos: 0,
+            colons: VecDeque::from(vec![14, 46, 84, 97, 124, 142, 161, 182, 208, 231]),
         }
     }
 
@@ -107,13 +104,7 @@ impl Iterator for Record {
                 return None;
             }
 
-            if self.pos >= self.colons.len() {
-                return None;
-            }
-
-            let colon = self.colons.indices[self.pos];
-            self.pos += 1;
-
+            let colon = self.colons.pop_front()?;
             let key = self.key_preceding(colon)?;
 
             if self.fields.remove(&key) {
@@ -121,22 +112,6 @@ impl Iterator for Record {
                 return Some((key, value));
             }
         }
-    }
-}
-
-struct ColonBitmaps {
-    indices: Vec<usize>,
-}
-
-impl ColonBitmaps {
-    fn generate(_bytes: &[u8]) -> Self {
-        ColonBitmaps {
-            indices: vec![14, 46, 84, 97, 124, 142, 161, 182, 208, 231],
-        }
-    }
-
-    fn len(&self) -> usize {
-        self.indices.len()
     }
 }
 
