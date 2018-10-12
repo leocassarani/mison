@@ -1,4 +1,7 @@
+use json::Value;
 use std::collections::HashSet;
+
+mod json;
 
 pub struct Query<'a> {
     field_set: HashSet<&'a str>,
@@ -29,10 +32,10 @@ pub struct Record<'a> {
 }
 
 impl<'a> Iterator for Record<'a> {
-    type Item = (&'a str, String);
+    type Item = (&'a str, Value);
 
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        self.fields.take("name").map(|key| (key, Value::Null))
     }
 }
 
