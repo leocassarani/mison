@@ -1,0 +1,6 @@
+[package]
+name = "mison"
+version = "0.1.0"
+authors = ["Leo Cassarani <me@leocassarani.net>"]
+
+[dependencies]
