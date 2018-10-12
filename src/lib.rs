@@ -16,12 +16,12 @@ impl Query {
         Query { field_set }
     }
 
-    pub fn run(&self, json: String) -> Record {
+    pub fn run(&self, json: String) -> impl Iterator<Item = (String, Value)> {
         Record::new(json.into_bytes(), self.field_set.clone())
     }
 }
 
-pub struct Record {
+struct Record {
     bytes: Vec<u8>,
     fields: HashSet<String>,
     colons: ColonBitmaps,
