@@ -1,6 +1,7 @@
 use json::Value;
 use std::collections::{HashSet, VecDeque};
 
+mod bitmaps;
 mod json;
 
 pub struct Query {
@@ -29,6 +30,8 @@ struct Record {
 
 impl Record {
     fn new(bytes: Vec<u8>, fields: HashSet<String>) -> Self {
+        let colons = bitmaps::LeveledColons::build(&bytes, 1);
+
         Record {
             bytes,
             fields,
@@ -112,13 +115,5 @@ impl Iterator for Record {
                 return Some((key, value));
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
