@@ -54,6 +54,28 @@ impl LeveledColons {
 
         LeveledColons { levels }
     }
+
+    pub fn positions(&self, level: usize) -> Vec<usize> {
+        let mut pos = Vec::new();
+
+        let length = if level < self.levels.len() {
+            self.levels[level].len()
+        } else {
+            0
+        };
+
+        for i in 0..length {
+            let mut colon_mask = self.levels[level][i];
+            while colon_mask > 0 {
+                let bit_mask = bitwise::extract(colon_mask);
+                let offset = (i as u32) * 32 + (bit_mask - 1).count_ones();
+                pos.push(offset as usize);
+                colon_mask = bitwise::remove(colon_mask);
+            }
+        }
+
+        pos
+    }
 }
 
 struct StructuralChars {
@@ -101,12 +123,51 @@ impl StructuralChars {
             quote[i] &= !(quote_word << 1);
         }
 
+        let string_mask = StringMask::build(&quote);
+        let colon = string_mask.apply(&literals.colon);
+        let left_brace = string_mask.apply(&literals.left_brace);
+        let right_brace = string_mask.apply(&literals.right_brace);
+
         StructuralChars {
-            quote: quote,
-            colon: literals.colon,
-            left_brace: literals.left_brace,
-            right_brace: literals.right_brace,
+            quote,
+            colon,
+            left_brace,
+            right_brace,
         }
+    }
+}
+
+struct StringMask {
+    mask: Vec<u32>,
+}
+
+impl StringMask {
+    fn build(quote: &[u32]) -> Self {
+        let mut mask = Vec::with_capacity(quote.len());
+        let mut n = 0;
+
+        for i in 0..quote.len() {
+            let mut quote_word = quote[i];
+            let mut mask_word = 0;
+
+            while quote_word > 0 {
+                mask_word ^= bitwise::smear(quote_word);
+                quote_word = bitwise::remove(quote_word);
+                n += 1;
+            }
+
+            if n % 2 == 1 {
+                mask_word = !mask_word;
+            }
+
+            mask.push(mask_word);
+        }
+
+        StringMask { mask }
+    }
+
+    fn apply(&self, bitmap: &[u32]) -> Vec<u32> {
+        bitmap.iter().zip(&self.mask).map(|(b, m)| b & !m).collect()
     }
 }
 
@@ -268,6 +329,45 @@ mod tests {
                 0b00100000000001010000000000000000,
                 0b00000000000001010000000000000001,
                 0b00000000000000000000000000100000,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_string_mask() {
+        let quote = [
+            0b00000000101000010100000001010010,
+            0b00100000000001010000000000000000,
+            0b00000000000001010000000000000001,
+            0b00000000000000000000000000100000,
+        ];
+
+        let colon = [
+            0b00000000000000001000000000100000,
+            0b01000000000000000000000000000000,
+            0b01000000000000100000000000000000,
+            0b00000000000000000000000000000000,
+        ];
+
+        let string_mask = StringMask::build(&quote);
+
+        assert_eq!(
+            string_mask.mask,
+            [
+                0b11111111001111100111111110011100,
+                0b00111111111110011111111111111111,
+                0b11111111111110011111111111111110,
+                0b00000000000000000000000000111111,
+            ]
+        );
+
+        assert_eq!(
+            string_mask.apply(&colon),
+            [
+                0b00000000000000001000000000100000,
+                0b01000000000000000000000000000000,
+                0b00000000000000100000000000000000,
+                0b00000000000000000000000000000000,
             ]
         );
     }

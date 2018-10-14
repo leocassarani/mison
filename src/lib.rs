@@ -1,4 +1,4 @@
-use json::Value;
+pub use json::Value;
 use std::collections::{HashSet, VecDeque};
 
 mod bitmaps;
@@ -30,12 +30,12 @@ struct Record {
 
 impl Record {
     fn new(bytes: Vec<u8>, fields: HashSet<String>) -> Self {
-        let colons = bitmaps::LeveledColons::build(&bytes, 1);
+        let colons = bitmaps::LeveledColons::build(&bytes, 2);
 
         Record {
             bytes,
             fields,
-            colons: VecDeque::from(vec![14, 46, 84, 97, 124, 142, 161, 182, 208, 231]),
+            colons: VecDeque::from(colons.positions(0)),
         }
     }
 
