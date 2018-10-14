@@ -79,10 +79,10 @@ impl LeveledColons {
 }
 
 struct StructuralChars {
-    quote: Vec<u32>,
-    colon: Vec<u32>,
-    left_brace: Vec<u32>,
-    right_brace: Vec<u32>,
+    pub quote: Vec<u32>,
+    pub colon: Vec<u32>,
+    pub left_brace: Vec<u32>,
+    pub right_brace: Vec<u32>,
 }
 
 impl StructuralChars {
@@ -178,11 +178,11 @@ use std::arch::x86::*;
 use std::arch::x86_64::*;
 
 struct LiteralChars {
-    backslash: Vec<u32>,
-    quote: Vec<u32>,
-    colon: Vec<u32>,
-    left_brace: Vec<u32>,
-    right_brace: Vec<u32>,
+    pub backslash: Vec<u32>,
+    pub quote: Vec<u32>,
+    pub colon: Vec<u32>,
+    pub left_brace: Vec<u32>,
+    pub right_brace: Vec<u32>,
 }
 
 impl LiteralChars {
