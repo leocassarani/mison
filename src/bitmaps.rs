@@ -93,34 +93,48 @@ impl StructuralChars {
         let mut carry = 0;
 
         for i in (0..quote.len()).rev() {
-            let mut quote_word = quote[i];
+            let quote_word = quote[i];
             let backslash_word = literals.backslash[i];
 
-            let msb = carry << 31;
+            // At any point, escaped_quotes is a bitmap that holds the quotes that we
+            // intend to "turn off" at the end of this iteration of the for loop.
+            // We initialise it with a 1 bit for every quote that is preceded by a
+            // backslash, then for every candidate escaped quote, we look at the number
+            // of consecutive backslashes that precede it to ensure we're not accidentally
+            // escaping quotes that are actually structural. For example, in the JSON string
+            // "foo\\\"bar" the second quote is escaped, but in "foo\\", it is structural.
+            let mut escaped_quotes = (quote_word >> 1 | carry << 31) & backslash_word;
             carry = quote_word & 1;
-            quote_word = (quote_word >> 1 | msb) & backslash_word;
 
-            let mut escapes = quote_word;
+            // We will use the escapes bitmap to drive our iteration by turning off one
+            // bit at a time until there are none left.
+            let mut escapes = escaped_quotes;
             let mut mask = 0;
 
             while escapes > 0 {
                 mask = !mask & bitwise::smear(escapes);
 
                 if (backslash_word & mask).count_ones() % 2 == 0 {
-                    // If there is an odd number of consecutive backslash characters,
-                    // then we have found a non-structural quote (i.e. one that has been
-                    // escaped by a backslash).
-                    quote_word &= !bitwise::extract(escapes);
+                    // If there is an even number of consecutive backslash characters,
+                    // such as in the string "foo\\", then the following quote is still
+                    // a structural quote, so we turn off the corresponding bit to avoid
+                    // masking it later.
+                    escaped_quotes &= !bitwise::extract(escapes);
                 }
 
                 escapes = bitwise::remove(escapes);
             }
 
+            // If there is an escaped quote at the boundary between this word and the next,
+            // then we reach over into the next vector element and turn off the MSB in the
+            // structural quote bitmap.
             if i + 1 < quote.len() {
-                quote[i + 1] &= !(quote_word >> 31);
+                quote[i + 1] &= !(escaped_quotes >> 31);
             }
 
-            quote[i] &= !(quote_word << 1);
+            // We shifted quote_word right by 1 so it would line up with the backslash bitmap,
+            // now we need to shift it back so it matches the position of the quotes in the JSON.
+            quote[i] &= !(escaped_quotes << 1);
         }
 
         let string_mask = StringMask::build(&quote);
