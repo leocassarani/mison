@@ -385,4 +385,34 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn test_bitwise_remove() {
+        assert_eq!(bitwise::remove(0), 0);
+        assert_eq!(bitwise::remove(0b1), 0);
+        assert_eq!(bitwise::remove(0b11101000), 0b11100000);
+    }
+
+    #[test]
+    fn test_bitwise_extract() {
+        assert_eq!(bitwise::extract(0), 0);
+        assert_eq!(bitwise::extract(0b100), 0b100);
+        assert_eq!(bitwise::extract(0b11101000), 0b00001000);
+        assert_eq!(
+            bitwise::extract(0b10000000000000000000000000000100),
+            0b00000000000000000000000000000100
+        );
+        assert_eq!(
+            bitwise::extract(0b10000000000000000000000000000000),
+            0b10000000000000000000000000000000
+        );
+    }
+
+    #[test]
+    fn test_bitwise_smear() {
+        assert_eq!(bitwise::smear(0), 0);
+        assert_eq!(bitwise::smear(0b1), 0b1);
+        assert_eq!(bitwise::smear(0b1000), 0b1111);
+        assert_eq!(bitwise::smear(0b11101000), 0b00001111);
+    }
 }
