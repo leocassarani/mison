@@ -37,8 +37,10 @@ impl LeveledColons {
                             levels[depth - 1][j] &= left_bit - 1;
                             levels[depth - 1][i] &= !(right_bit - 1);
 
-                            for k in (j + 1)..i {
-                                levels[depth][k] = 0;
+                            if depth < nesting {
+                                for k in (j + 1)..i {
+                                    levels[depth][k] = 0;
+                                }
                             }
                         }
                     }
