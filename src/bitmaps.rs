@@ -42,13 +42,11 @@ impl LeveledColons {
                             }
                         }
                     }
+                } else {
+                    break;
                 }
 
                 right_mask = bitwise::remove(right_mask);
-
-                if right_bit == 0 {
-                    break;
-                }
             }
         }
 
