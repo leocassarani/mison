@@ -4,15 +4,25 @@ use std::collections::{HashSet, VecDeque};
 mod bitmaps;
 mod json;
 
+pub enum KeyPath {
+    Field(String),
+    Nested(Vec<String>),
+}
+
 pub struct Query {
     field_set: HashSet<String>,
 }
 
 impl Query {
-    pub fn new(fields: Vec<impl Into<String>>) -> Self {
+    pub fn new(fields: Vec<KeyPath>) -> Self {
         let mut field_set = HashSet::with_capacity(fields.len());
         for field in fields {
-            field_set.insert(field.into());
+            let path = match field {
+                KeyPath::Field(s) => s,
+                KeyPath::Nested(vec) => vec.join("."),
+            };
+
+            field_set.insert(path);
         }
         Query { field_set }
     }
