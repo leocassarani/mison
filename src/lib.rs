@@ -1,19 +1,16 @@
 pub use json::Value;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 mod bitmaps;
 mod json;
 
 pub struct Query {
-    field_set: HashSet<String>,
+    field_set: FieldSet,
 }
 
 impl Query {
-    pub fn new(fields: Vec<impl Into<String>>) -> Self {
-        let mut field_set = HashSet::with_capacity(fields.len());
-        for field in fields {
-            field_set.insert(field.into());
-        }
+    pub fn new(fields: Vec<Vec<String>>) -> Self {
+        let field_set = FieldSet::new(fields);
         Query { field_set }
     }
 
@@ -22,15 +19,58 @@ impl Query {
     }
 }
 
+#[derive(Clone)]
+enum Field {
+    Simple,
+    Nested(FieldSet),
+}
+
+#[derive(Clone)]
+struct FieldSet {
+    fields: HashMap<String, Field>,
+}
+
+impl FieldSet {
+    fn new(key_paths: Vec<Vec<String>>) -> Self {
+        let mut fields = HashMap::with_capacity(key_paths.len());
+
+        for key_path in key_paths {
+            if let Some((head, tail)) = key_path.split_first() {
+                let value = if tail.is_empty() {
+                    Field::Simple
+                } else {
+                    Field::Nested(FieldSet::new(vec![tail.to_vec()]))
+                };
+
+                fields.insert(head.to_owned(), value);
+            }
+        }
+
+        FieldSet { fields }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
+    fn max_depth(&self) -> usize {
+        2
+    }
+
+    fn remove(&mut self, key: &str) -> Option<Field> {
+        self.fields.remove(key)
+    }
+}
+
 struct Record {
     bytes: Vec<u8>,
-    fields: HashSet<String>,
+    fields: FieldSet,
     colons: VecDeque<usize>,
 }
 
 impl Record {
-    fn new(bytes: Vec<u8>, fields: HashSet<String>) -> Self {
-        let colons = bitmaps::LeveledColons::build(&bytes, 2);
+    fn new(bytes: Vec<u8>, fields: FieldSet) -> Self {
+        let colons = bitmaps::LeveledColons::build(&bytes, fields.max_depth());
 
         Record {
             bytes,
@@ -110,9 +150,15 @@ impl Iterator for Record {
             let colon = self.colons.pop_front()?;
             let key = self.key_preceding(colon)?;
 
-            if self.fields.remove(&key) {
-                let value = self.value_following(colon)?;
-                return Some((key, value));
+            match self.fields.remove(&key) {
+                Some(Field::Simple) => {
+                    let value = self.value_following(colon)?;
+                    return Some((key, value));
+                }
+                Some(Field::Nested(_fields)) => {
+                    return Some((key, Value::String("{ ... }".to_owned())));
+                }
+                None => {}
             }
         }
     }
